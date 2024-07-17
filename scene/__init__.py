@@ -19,11 +19,13 @@ from scene.gaussian_model import GaussianModel
 from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 
+
 class Scene:
 
     gaussians : GaussianModel
 
-    def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[1.0]):
+    def __init__(self, args : ModelParams, gaussians : GaussianModel,
+                 load_iteration=None, shuffle=True, resolution_scales=[1.0]):
         """b
         :param path: Path to colmap scene main folder.
         """
@@ -100,6 +102,7 @@ class Scene:
             pickle.dump(camera_data, open(camera_cache_path, "wb"))
             print(f"Saved cameras to cache {camera_cache_path}")
 
+        # 根据稀疏点云来计算稀疏点云中心为球心的最小外接球体半径
         self.cameras_extent = scene_info.nerf_normalization["radius"]
 
         if self.loaded_iter:

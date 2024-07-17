@@ -89,10 +89,11 @@ class OptimizationParams(ParamGroup):
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
-    cmdlne_string = sys.argv[1:]
-    cfgfile_string = "Namespace()"
-    args_cmdline = parser.parse_args(cmdlne_string)
+    cmdlne_string = sys.argv[1:]  # 从命令行参数中获取除脚本名称外的所有参数，并将其存储在cmdlne_string变量中
+    cfgfile_string = "Namespace()"  # 初始化一个字符串变量cfgfile_string，用于存储后续从配置文件读取的内容。
+    args_cmdline = parser.parse_args(cmdlne_string)  # 使用给定的parser对命令行参数进行解析，将结果保存在args_cmdline变量中。
 
+    # 根据args_cmdline中的model_path下的cfg_args配置文件路径。
     try:
         cfgfilepath = os.path.join(args_cmdline.model_path, "cfg_args")
         print("Looking for config file in", cfgfilepath)
@@ -102,9 +103,10 @@ def get_combined_args(parser : ArgumentParser):
     except TypeError:
         print("Config file not found at")
         pass
-    args_cfgfile = eval(cfgfile_string)
+    args_cfgfile = eval(cfgfile_string)  # 使用eval()函数将包含配置文件内容的字符串转换为Python对象并赋值给args_cfgfile变量。
 
-    merged_dict = vars(args_cfgfile).copy()
+    merged_dict = vars(args_cfgfile).copy()  # 将args_cfgfile对象中的属性转化为字典，并复制给merged_dict变量。
+    # 遍历args_cmdline对象中的属性和值。
     for k,v in vars(args_cmdline).items():
         if v != None:
             merged_dict[k] = v

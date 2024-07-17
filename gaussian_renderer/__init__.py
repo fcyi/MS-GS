@@ -26,6 +26,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor,
     # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
     screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
     try:
+        # retain_grad()方法被调用时，会将张量的requires_grad属性设置为True，并在计算图中保留梯度信息。
+        # 这意味着，在进行反向传播时，该张量将具有梯度值，可以通过调用backward()方法进行梯度传播和求导操作。
         screenspace_points.retain_grad()
     except:
         pass

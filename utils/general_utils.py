@@ -15,9 +15,12 @@ from datetime import datetime
 import numpy as np
 import random
 
+
 def inverse_sigmoid(x):
     return torch.log(x/(1-x))
 
+
+# 图像缩放、转为张量，像素值归一化、维度调整（HWC->CHW）
 def PILtoTorch(pil_image, resolution):
     resized_image_PIL = pil_image.resize(resolution)
     resized_image = torch.from_numpy(np.array(resized_image_PIL)) / 255.0
@@ -25,6 +28,7 @@ def PILtoTorch(pil_image, resolution):
         return resized_image.permute(2, 0, 1)
     else:
         return resized_image.unsqueeze(dim=-1).permute(2, 0, 1)
+
 
 def get_expon_lr_func(
     lr_init, lr_final, lr_delay_steps=0, lr_delay_mult=1.0, max_steps=1000000

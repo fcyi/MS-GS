@@ -45,21 +45,23 @@ class SceneInfo(NamedTuple):
     nerf_normalization: dict
     ply_path: str
 
+
+# 获取相机光心中心以及相机光心距离光心中心的最大距离
 def getNerfppNorm(cam_info):
     def get_center_and_diag(cam_centers):
         cam_centers = np.hstack(cam_centers)
-        avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)
+        avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)  # 计算相机光心中心
         center = avg_cam_center
-        dist = np.linalg.norm(cam_centers - center, axis=0, keepdims=True)
-        diagonal = np.max(dist)
+        dist = np.linalg.norm(cam_centers - center, axis=0, keepdims=True)  # 计算每一个相机光心坐标分量距离光心中心相应坐标分量的距离
+        diagonal = np.max(dist)  # 获取最大的分量距离
         return center.flatten(), diagonal
 
     cam_centers = []
 
     for cam in cam_info:
-        W2C = getWorld2View2(cam.R, cam.T)
-        C2W = np.linalg.inv(W2C)
-        cam_centers.append(C2W[:3, 3:4])
+        W2C = getWorld2View2(cam.R, cam.T)  # 获取相机坐标系下的坐标
+        C2W = np.linalg.inv(W2C)            # 获取世界坐标系下的坐标
+        cam_centers.append(C2W[:3, 3:4])    # 世界坐标系下的平移量即为相机光心
 
     center, diagonal = get_center_and_diag(cam_centers)
     radius = diagonal * 1.1
@@ -145,6 +147,8 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
     reading_dir = "images" if images == None else images
+    # colmap中存储的旋转是相机坐标系到世界坐标系的旋转，平移量是相机坐标系下的平移，但是由于读取时的对旋转矩阵的转置操作，
+    # 读取到的外参中的旋转是世界坐标系到相机坐标系的旋转，平移量是相机坐标系下的平移
     cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 

@@ -189,19 +189,23 @@ class GaussianModel:
     def create_from_pcd(self, pcd : BasicPointCloud, spatial_lr_scale : float):
         self.spatial_lr_scale = spatial_lr_scale
         fused_point_cloud = torch.tensor(np.asarray(pcd.points)).float().cuda()
-        fused_color = RGB2SH(torch.tensor(np.asarray(pcd.colors)).float().cuda())
-        features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
-        features[:, :3, 0 ] = fused_color
-        features[:, 3:, 1:] = 0.0
+        fused_color = RGB2SH(torch.tensor(np.asarray(pcd.colors)).float().cuda())  # 将点云的颜色数据转换为直流分量的球谐函数表示。
+        features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()  # N 3 16（若阶数为3，则有16个球谐系数）
+        # !bug
+        # 将fused_color复制到features的前3个通道（RGB），其余通道置为0。
+        features[:, :3, 0] = fused_color
+        features[:, :3, 1:] = 0.0
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
+        # 计算点云之间(每个点云与其最近的K个点的平均距离的平方）的欧氏距离的平方，并将小于等于0.0000001的值压缩到0.0000001以避免除以0的错误。
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd.points)).float().cuda()), 0.0000001)
-        scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 3)
+        scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 3)  # 初始化高斯球体的大小，即3个轴的长度。之所以使用log，是因为最后使用的是激活函数的输出，而高斯球体大小的激活采用的是指数函数
+        # qw qx qy qz，四元数，qw设为1，其对应的旋转角度为2arccos1 = 0，其余为0，默认高斯球体不旋转
         rots = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")
         rots[:, 0] = 1
 
-        opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))  # 不透明度
         if self.multi_occ:
             occ_multiplier = inverse_sigmoid(0.99 * torch.ones((len(fused_point_cloud), self.n_lvl_occ, 1), dtype=torch.float, device="cuda"))
         else:
@@ -220,7 +224,7 @@ class GaussianModel:
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self._occ_multiplier = nn.Parameter(occ_multiplier.requires_grad_(True if self.multi_occ else False))
         self._dc_delta = nn.Parameter(dc_delta.requires_grad_(True if self.multi_dc else False))
-        self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+        self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")  # # 高斯球体投影2D平面后的最大半径
         self.max_pixel_sizes = torch.ones((self.get_xyz.shape[0]), device="cuda") * -1
         self.min_pixel_sizes = torch.ones((self.get_xyz.shape[0]), device="cuda") * -1
         self.base_gaussian_mask = torch.zeros((self.get_xyz.shape[0]), device="cuda", dtype=torch.bool, requires_grad=False)

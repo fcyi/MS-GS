@@ -18,7 +18,9 @@ WARNED = False
 
 def loadCam(args, id, cam_info, resolution_scale):
     orig_w, orig_h = cam_info.image.size
-
+    # resolution-图像缩放后的分辨率
+    # args.resolutio-图像处理时期望使用的分辨率/缩放尺度，若为-1则要求图像宽度不能超过1600
+    # resolution_scale-图像缩放尺度
     if args.resolution in [1, 2, 4, 8]:
         resolution = round(orig_w/(resolution_scale * args.resolution)), round(orig_h/(resolution_scale * args.resolution))
     else:  # should be a type that converts to float
@@ -43,7 +45,8 @@ def loadCam(args, id, cam_info, resolution_scale):
     gt_image = resized_image_rgb[:3, ...]
     loaded_mask = None
 
-    if resized_image_rgb.shape[1] == 4:
+    # !bug
+    if resized_image_rgb.shape[0] == 4:
         loaded_mask = resized_image_rgb[3:4, ...]
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
@@ -60,14 +63,15 @@ def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     return camera_list
 
 def camera_to_JSON(id, camera : Camera):
+    # 对每一个图像对应的相机参数进行存储，此处的相机外参在世界坐标系下
     Rt = np.zeros((4, 4))
     Rt[:3, :3] = camera.R.transpose()
     Rt[:3, 3] = camera.T
     Rt[3, 3] = 1.0
 
-    W2C = np.linalg.inv(Rt)
-    pos = W2C[:3, 3]
-    rot = W2C[:3, :3]
+    C2W = np.linalg.inv(Rt)
+    pos = C2W[:3, 3]
+    rot = C2W[:3, :3]
     serializable_array_2d = [x.tolist() for x in rot]
     camera_entry = {
         'id' : id,
